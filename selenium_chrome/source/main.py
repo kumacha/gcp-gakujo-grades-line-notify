@@ -183,3 +183,5 @@ def line_notify():
     access_seiseki()
     notify_new_grade(LINE_TOKEN, LINE_API)
     browser.quit()
+
+line_notify()
