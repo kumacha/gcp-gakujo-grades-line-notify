@@ -1,5 +1,4 @@
 import os
-from selenium import webdriver
 from fake_useragent import UserAgent
 import requests
 import chromedriver_binary
@@ -178,8 +177,9 @@ def notify_new_grade(token, api):
         requests.post(api, data=payload, headers=headers)
 
 
-gakujo_login(BASE_URL, SHIZUDAI_ID, PASS_WORD)
-access_kyoumu_system()
-access_seiseki()
-notify_new_grade(LINE_TOKEN, LINE_API)
-browser.quit()
+def line_notify():
+    gakujo_login(BASE_URL, SHIZUDAI_ID, PASS_WORD)
+    access_kyoumu_system()
+    access_seiseki()
+    notify_new_grade(LINE_TOKEN, LINE_API)
+    browser.quit()
