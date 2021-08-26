@@ -1,5 +1,5 @@
 import os
-from fake_useragent import UserAgent
+from selenium import webdriver
 import requests
 import chromedriver_binary
 from selenium import webdriver
@@ -9,25 +9,28 @@ import time
 import datetime
 import config  # config.pyから.envの内容をimport
 
-# 静大ID
-SHIZUDAI_ID = config.MY_SHIZUDAI_ID
-# パスワード
-PASS_WORD = config.MY_PASS_WORD
-# 学務情報システムのURL
-BASE_URL = config.BASE_URL
-# 自分で取得したLINE Notifyのトークン
-LINE_TOKEN = config.LINE_NOTIFY_TOKEN
-# LINE NotifyのAPIのURL
-LINE_API = config.LINE_NOTIFY_API
 
-# ChromeDriverをbroserとして変数化
-chrome_options = webdriver.ChromeOptions()
-chrome_options.binary_location = os.getcwd() + "/headless-chromium"    
-browser = webdriver.Chrome(os.getcwd() + "/chromedriver",chrome_options=chrome_options)
+def line_notify():
 
-def gakujo_login(url, user_id, password):  # 学務情報システムにログインするメソッド
+    # 静大ID
+    SHIZUDAI_ID = config.MY_SHIZUDAI_ID
+    # パスワード
+    PASS_WORD = config.MY_PASS_WORD
+    # 学務情報システムのURL
+    BASE_URL = config.BASE_URL
+    # 自分で取得したLINE Notifyのトークン
+    LINE_TOKEN = config.LINE_NOTIFY_TOKEN
+    # LINE NotifyのAPIのURL
+    LINE_API = config.LINE_NOTIFY_API
+
+    # ChromeDriverをbroserとして変数化
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.binary_location = os.getcwd() + "/headless-chromium"
+    browser = webdriver.Chrome(
+        os.getcwd() + "/chromedriver", chrome_options=chrome_options)
+    # 学情にアクセス
     browser.implicitly_wait(3)
-    browser.get(url)
+    browser.get(BASE_URL)
     print("ログインページにアクセス")
     print(browser.current_url)
     time.sleep(1)
@@ -42,14 +45,14 @@ def gakujo_login(url, user_id, password):  # 学務情報システムにログ�
     id = "username"
     element = browser.find_element_by_id(id)
     element.clear()
-    element.send_keys(user_id)
+    element.send_keys(SHIZUDAI_ID)
     time.sleep(1)
 
     # パスワードを入力
     id = "password"
     element = browser.find_element_by_id(id)
     element.clear()
-    element.send_keys(password)
+    element.send_keys(PASS_WORD)
     time.sleep(1)
 
     # POST!!!!ログインボタンを押す
@@ -59,8 +62,6 @@ def gakujo_login(url, user_id, password):  # 学務情報システムにログ�
     print("学務情報システムにログインしたぞ〜")
     time.sleep(1)
 
-
-def access_kyoumu_system():  # 教務システムにアクセスするメソッド
     # 教務システムにアクセス
     selector = "ul.list-arrow.ml15 > li.icon-arrow-gray > a"
     kyoumu_link = browser.find_element_by_css_selector(selector)
@@ -73,8 +74,6 @@ def access_kyoumu_system():  # 教務システムにアクセスするメソッ�
     # 操作を新規ウィンドウに移す
     browser.switch_to_window(allHandles[1])
 
-
-def access_seiseki():  # 成績情報ページにアクセスするメソッド
     # 成績情報の参照
     selector = "body > table:nth-child(4) > tbody > tr > td:nth-child(2) > table > tbody > tr:nth-child(4) > td > table > tbody > tr:nth-child(1) > td:nth-child(2) > a"
     element = browser.find_element_by_css_selector(selector)
@@ -91,17 +90,6 @@ def access_seiseki():  # 成績情報ページにアクセスするメソッド
     print(browser.current_url)
     time.sleep(1)
 
-
-def decimal_normalize(f):
-    """数値fの小数点以下を正規化し、文字列で返す"""
-    def _remove_exponent(d):
-        return d.quantize(Decimal(1)) if d == d.to_integral() else d.normalize()
-    a = Decimal.normalize(Decimal(str(f)))
-    b = _remove_exponent(a)
-    return str(b)
-
-
-def notify_new_grade(token, api):
     # 成績情報の参照ページのHTMLを取得
     html = browser.page_source
 
@@ -132,6 +120,14 @@ def notify_new_grade(token, api):
     print(len(grade_array))
     class_num = len(grade_array)/11
     print(class_num)
+
+    def decimal_normalize(f):
+        """数値fの小数点以下を正規化し、文字列で返す"""
+        def _remove_exponent(d):
+            return d.quantize(Decimal(1)) if d == d.to_integral() else d.normalize()
+        a = Decimal.normalize(Decimal(str(f)))
+        b = _remove_exponent(a)
+        return str(b)
 
     # 講義の数をint型にする
     class_num = decimal_normalize(class_num)
@@ -167,21 +163,14 @@ def notify_new_grade(token, api):
                 ' '+line_array[n][6]+'点 ' + ' GP '+line_array[n][7]
             n = n+1
             payload = {'message': message}
-            headers = {'Authorization': 'Bearer ' + token}
-            requests.post(api, data=payload, headers=headers)
+            headers = {'Authorization': 'Bearer ' + LINE_TOKEN}
+            requests.post(LINE_API, data=payload, headers=headers)
     # ここを消せば出ていない時の通知をオフにします
     else:
         message = '\n更新された成績はありません'
         payload = {'message': message}
-        headers = {'Authorization': 'Bearer ' + token}
-        requests.post(api, data=payload, headers=headers)
+        headers = {'Authorization': 'Bearer ' + LINE_TOKEN}
+        requests.post(LINE_API, data=payload, headers=headers)
 
-
-def line_notify():
-    gakujo_login(BASE_URL, SHIZUDAI_ID, PASS_WORD)
-    access_kyoumu_system()
-    access_seiseki()
-    notify_new_grade(LINE_TOKEN, LINE_API)
-    browser.quit()
 
 line_notify()
